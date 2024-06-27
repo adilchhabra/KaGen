@@ -95,6 +95,8 @@ struct PGeneratorConfig {
     StatisticsLevel statistics_level      = StatisticsLevel::BASIC;
     bool            skip_postprocessing   = false;
     bool            print_header          = true;
+	bool streaming_remove_self_loops = true;
+	
 
     // External memory mode settings
     ExternalMemoryConfig external{};
@@ -104,6 +106,7 @@ struct PGeneratorConfig {
     SInt          n          = 0;     // Number of nodes
     SInt          m          = 0;     // Number of edges
     SInt          k          = 0;     // Number of chunks
+	SInt adil_mode = 0;
     double        p          = 0.0;   // Edge probability
     double        r          = 0.0;   // Edge radius
     bool          self_loops = false; // Allow self loops
@@ -122,6 +125,8 @@ struct PGeneratorConfig {
     double        rmat_c     = 0.0;
     bool          directed   = false;
     bool          permute    = false; // Permute node vertices
+	bool streaming_add_reverse_edges = false;
+
 
     double max_vertex_imbalance = 0.1; // RGG, RDG, RHG
 

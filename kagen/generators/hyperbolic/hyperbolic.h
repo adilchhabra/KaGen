@@ -40,6 +40,8 @@ public:
     using Vertex = std::tuple<Double, Double, Double, Double, Double, SInt>;
 
     Hyperbolic(const PGeneratorConfig& config, PEID rank, PEID size);
+      SInt start_vertex_range;
+  SInt end_vertex_range;
 
 protected:
     void GenerateEdgeList() final;

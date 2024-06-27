@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 
   kagen::StreamingGenerator streamGenerator(MPI_COMM_WORLD, chunks);
 
-  streamGenerator.setupConfig_RGG2D(n, 0, r, false);
+  streamGenerator.setupConfig_RGG3D(n, 0, r, false);
   streamGenerator.setRandomSeed(seed);
   streamGenerator.setupChunkGeneration(MPI_COMM_WORLD);
   overall_time += t.elapsed();
@@ -97,8 +97,8 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Overall time for RHG generation: " << overall_time << std::endl;
   long maxRSS = getMaxRSS();
-  std::cout << "Maximum Resident Set Size (KB):  " << maxRSS << std::endl;
-  std::cout << "Number of edges:                 " << edges << std::endl;
-  std::cout << "Estimated edges:                 "
+  std::cout << "Maximum Resident Set Size (KB): " << maxRSS << std::endl;
+  std::cout << "Number of edges:                " << edges << std::endl;
+  std::cout << "Estimated edges:                "
             << streamGenerator.estimate_edges() << std::endl;
 }

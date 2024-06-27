@@ -23,15 +23,15 @@ int main(int argc, char *argv[]) {
 
   if (argc < 5) {
     std::cout
-        << "Error! Not enough arguments. <vertices> <chunks> <radius> <seed>"
+        << "Error! Not enough arguments. <vertices> <chunks> <degree> <seed>"
         << std::endl;
     return 1;
   }
 
   unsigned int n = std::stoi(argv[1]);
   unsigned int chunks = std::stoi(argv[2]);
-  double r = std::stod(argv[3]);
-  int seed = std::stoi(argv[4]);
+  unsigned int d = std::stoi(argv[3]);
+  unsigned int seed = std::stoi(argv[4]);
 
   MPI_Init(&argc, &argv);
 
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 
   kagen::StreamingGenerator streamGenerator(MPI_COMM_WORLD, chunks);
 
-  streamGenerator.setupConfig_RGG2D(n, 0, r, false);
+  streamGenerator.setupConfig_BA(n, 0, d, false, false);
   streamGenerator.setRandomSeed(seed);
   streamGenerator.setupChunkGeneration(MPI_COMM_WORLD);
   overall_time += t.elapsed();
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Overall time for RHG generation: " << overall_time << std::endl;
   long maxRSS = getMaxRSS();
   std::cout << "Maximum Resident Set Size (KB):  " << maxRSS << std::endl;
-  std::cout << "Number of edges:                 " << edges << std::endl;
-  std::cout << "Estimated edges:                 "
+  std::cout << "Number of edges:               " << edges << std::endl;
+  std::cout << "Estimated edges:               "
             << streamGenerator.estimate_edges() << std::endl;
 }
