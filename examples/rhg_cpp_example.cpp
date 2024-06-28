@@ -21,17 +21,18 @@ long getMaxRSS() {
 
 int main(int argc, char *argv[]) {
 
-  if (argc < 5) {
-    std::cout
-        << "Error! Not enough arguments. <vertices> <chunks> <radius> <seed>"
-        << std::endl;
+  if (argc < 6) {
+    std::cout << "Error! Not enough arguments. <vertices> <chunks> <average "
+                 "degree> <gamma> <seed>"
+              << std::endl;
     return 1;
   }
 
   unsigned int n = std::stoi(argv[1]);
   unsigned int chunks = std::stoi(argv[2]);
-  double r = std::stod(argv[3]);
-  int seed = std::stoi(argv[4]);
+  double avg_deg = std::stod(argv[3]);
+  double gamma = std::stod(argv[4]);
+  int seed = std::stoi(argv[5]);
 
   MPI_Init(&argc, &argv);
 
@@ -50,7 +51,7 @@ int main(int argc, char *argv[]) {
 
   kagen::StreamingGenerator streamGenerator(MPI_COMM_WORLD, chunks);
 
-  streamGenerator.setupConfig_RGG2D(n, 0, r, false);
+  streamGenerator.setupConfig_RHG(n, 0, avg_deg, gamma, false);
   streamGenerator.setRandomSeed(seed);
   streamGenerator.setupChunkGeneration(MPI_COMM_WORLD);
   overall_time += t.elapsed();

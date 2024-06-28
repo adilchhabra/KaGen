@@ -50,6 +50,11 @@ protected:
         graph_.edges.emplace_back(from, to);
     }
 
+	inline void SetStartEndVertex(const SInt from, const SInt to) {
+		graph_.start_vertex_range = from; 
+		graph_.end_vertex_range = to;
+	}
+
     inline void PushEdgeWeight(const SSInt weight) {
         graph_.edge_weights.push_back(weight);
     }

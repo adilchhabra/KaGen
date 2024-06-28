@@ -23,14 +23,14 @@ int main(int argc, char *argv[]) {
 
   if (argc < 5) {
     std::cout
-        << "Error! Not enough arguments. <vertices> <chunks> <radius> <seed>"
+        << "Error! Not enough arguments. <vertices> <chunks> <periodic> <seed>"
         << std::endl;
     return 1;
   }
 
   unsigned int n = std::stoi(argv[1]);
   unsigned int chunks = std::stoi(argv[2]);
-  double r = std::stod(argv[3]);
+  int periodic = std::stoi(argv[3]);
   int seed = std::stoi(argv[4]);
 
   MPI_Init(&argc, &argv);
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 
   kagen::StreamingGenerator streamGenerator(MPI_COMM_WORLD, chunks);
 
-  streamGenerator.setupConfig_RGG2D(n, 0, r, false);
+  streamGenerator.setupConfig_RDG3D(n, 0, false);
   streamGenerator.setRandomSeed(seed);
   streamGenerator.setupChunkGeneration(MPI_COMM_WORLD);
   overall_time += t.elapsed();

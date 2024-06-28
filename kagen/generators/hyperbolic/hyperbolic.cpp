@@ -54,6 +54,7 @@ HyperbolicFactory::NormalizeParameters(PGeneratorConfig config, PEID, const PEID
 
     // External memory mode does not call Finalize() -- instead, we have to enable postprocessing via flags
     config.external.fix_nonlocal_reverse_edges = true;
+    config.streaming_add_reverse_edges = true; 
 
     return config;
 }
@@ -160,6 +161,9 @@ void Hyperbolic<Double>::GenerateEdgeList() {
 
     const SInt start_node = std::get<3>(chunks_[local_chunk_start_]);
     SetVertexRange(start_node, start_node + num_nodes_);
+      start_vertex_range = start_node;
+  end_vertex_range = start_node + num_nodes_;
+  SetStartEndVertex(start_vertex_range, end_vertex_range);
 }
 
 template <typename Double>
