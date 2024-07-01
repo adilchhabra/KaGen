@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
         streamGenerator.streamVertex(i + 1, MPI_COMM_WORLD, neighbors);
     overall_time += t.elapsed();
     edges += neighbors.size();
-	std::cout << i << ": ";
+	std::cout << i+1 << ": ";
     for (unsigned int j = 0; j < neighbors.size(); j++) {
 		std::cout << neighbors[j] << " ";
     }

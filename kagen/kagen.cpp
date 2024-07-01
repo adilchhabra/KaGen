@@ -888,9 +888,9 @@ void StreamingGenerator::streamVertex(unsigned int vertex, MPI_Comm comm, std::v
   auto last = std::unique(neighbors.begin(), neighbors.end());
   neighbors.erase(last, neighbors.end());
 
-	for(unsigned int u = 0; u < neighbors.size(); u++) {
-		neighbors[u]--;
-	}
+//	for(unsigned int u = 0; u < neighbors.size(); u++) {
+//		neighbors[u]--;
+//	}
 
   //return neighbors;
 }
