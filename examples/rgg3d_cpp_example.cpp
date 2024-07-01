@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
   t.restart();
   unsigned int edges = 0;
   for (unsigned int i = 0; i < n; i++) {
-    std::vector<unsigned int> neighbors =
-        streamGenerator.streamVertex(i + 1, MPI_COMM_WORLD);
+    std::vector<unsigned int> neighbors;
+        streamGenerator.streamVertex(i + 1, MPI_COMM_WORLD, neighbors);
     overall_time += t.elapsed();
     edges += neighbors.size();
     /*out << i + 1 << ": ";

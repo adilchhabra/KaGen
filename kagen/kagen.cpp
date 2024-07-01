@@ -827,9 +827,9 @@ StreamingGenerator::generateVertex(MPI_Comm comm) {
   }
 }
 
-std::vector<unsigned int> StreamingGenerator::streamVertex(unsigned int vertex,
-                                                           MPI_Comm comm) {
-  std::vector<unsigned int> neighbors;
+// make sure empty vector is given.
+void StreamingGenerator::streamVertex(unsigned int vertex, MPI_Comm comm, std::vector<unsigned int>& neighbors) {
+  //std::vector<unsigned int> neighbors;
   if (vertex == 1) { // this is we are starting the stream
     // for (unsigned int k = 0; k < vertex_distribution.size(); k++) {
     //   std::cout << vertex_distribution[k] << std::endl;
@@ -888,7 +888,11 @@ std::vector<unsigned int> StreamingGenerator::streamVertex(unsigned int vertex,
   auto last = std::unique(neighbors.begin(), neighbors.end());
   neighbors.erase(last, neighbors.end());
 
-  return neighbors;
+	for(unsigned int u = 0; u < neighbors.size(); u++) {
+		neighbors[u]--;
+	}
+
+  //return neighbors;
 }
 
 bool StreamingGenerator::isChunkEmpty(unsigned int vertex) {

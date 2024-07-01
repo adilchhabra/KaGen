@@ -508,7 +508,7 @@ namespace kagen {
 class StreamingGenerator {
 public:
   StreamingGenerator(MPI_Comm comm, int chunks);
-  std::vector<unsigned int> streamVertex(unsigned int vertex, MPI_Comm comm);
+  void streamVertex(unsigned int vertex, MPI_Comm comm, std::vector<unsigned int>& neighbors);
   std::pair<unsigned int, std::vector<unsigned int>>
   getNextVertex(MPI_Comm comm, unsigned int vertex);
   std::pair<unsigned int, std::vector<unsigned int>>
