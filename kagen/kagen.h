@@ -10,11 +10,13 @@
     #include <unordered_map>
     #include <utility>
     #include <vector>
+	#include <map>
 #endif
 
 #include <mpi.h>
 #include <stdbool.h>
 #include <stddef.h>
+
 
 #define KAGEN_VERSION_MAJOR 1
 #define KAGEN_VERSION_MINOR 1
