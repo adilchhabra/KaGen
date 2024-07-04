@@ -3,6 +3,7 @@
 #ifdef __cplusplus
     #include <algorithm>
     #include <cstdint>
+    #include <map>
     #include <memory>
     #include <string>
     #include <tuple>
@@ -10,19 +11,15 @@
     #include <unordered_map>
     #include <utility>
     #include <vector>
-	#include <map>
 #endif
 
 #include <mpi.h>
 #include <stdbool.h>
 #include <stddef.h>
-//#include <map>
 
 #define KAGEN_VERSION_MAJOR 1
 #define KAGEN_VERSION_MINOR 1
 #define KAGEN_VERSION_PATCH 0
-
-//typedef uint64_t NodeID; 
 
 #ifdef __cplusplus
 namespace kagen {
@@ -198,7 +195,6 @@ struct Graph {
     EdgeWeights   edge_weights;
     Coordinates   coordinates;
 
-
     SInt NumberOfLocalVertices() const;
 
     SInt NumberOfLocalEdges() const;
@@ -210,9 +206,8 @@ struct Graph {
 
     void Clear();
 
-	SInt start_vertex_range;
-  SInt end_vertex_range;
-
+    SInt start_vertex_range;
+    SInt end_vertex_range;
 
     template <typename T = SInt>
     std::vector<std::pair<T, T>> TakeEdges() {
@@ -263,22 +258,22 @@ private:
 
 class StreamingKaGen {
 public:
-  StreamingKaGen(MPI_Comm comm);
+    StreamingKaGen(MPI_Comm comm);
 
-  StreamingKaGen(const StreamingKaGen &) = delete;
-  StreamingKaGen(StreamingKaGen &&) noexcept;
+    StreamingKaGen(const StreamingKaGen&) = delete;
+    StreamingKaGen(StreamingKaGen&&) noexcept;
 
-  StreamingKaGen operator=(const StreamingKaGen &) = delete;
-  StreamingKaGen operator=(StreamingKaGen &&) noexcept;
+    StreamingKaGen operator=(const StreamingKaGen&) = delete;
+    StreamingKaGen operator=(StreamingKaGen&&) noexcept;
 
-  ~StreamingKaGen();
+    ~StreamingKaGen();
 
 private:
-  void SetDefaults();
+    void SetDefaults();
 
-  MPI_Comm comm_;
-  std::unique_ptr<struct PGeneratorConfig> config_;
-  GraphRepresentation representation_;
+    MPI_Comm                                 comm_;
+    std::unique_ptr<struct PGeneratorConfig> config_;
+    GraphRepresentation                      representation_;
 };
 
 class KaGen {
@@ -318,7 +313,8 @@ public:
      * @param weight_range_begin (Included) begin of weight range for edge weights, i.e. minimum possible edge weight.
      * @param weight_range_end (Excluded) end of weight range for edge weights.
      */
-    void ConfigureEdgeWeightGeneration(EdgeWeightGeneratorType generator, SInt weight_range_begin, SInt weight_range_end);
+    void
+    ConfigureEdgeWeightGeneration(EdgeWeightGeneratorType generator, SInt weight_range_begin, SInt weight_range_end);
 
     /*!
      * If enabled, KaGen will print information to stdout and stderr (but only on rank 0).
@@ -470,8 +466,10 @@ public:
     Graph GenerateRMAT(SInt n, SInt m, LPFloat a, LPFloat b, LPFloat c, bool directed = false, bool self_loops = false);
 
     Graph ReadFromFile(std::string const& filename, const FileFormat format, const GraphDistribution distribution);
-    
-    PGeneratorConfig *getConfig() const { return config_.get(); }
+
+    PGeneratorConfig* getConfig() const {
+        return config_.get();
+    }
 
 private:
     void SetDefaults();
@@ -479,7 +477,7 @@ private:
     MPI_Comm                                 comm_;
     std::unique_ptr<struct PGeneratorConfig> config_;
     GraphRepresentation                      representation_;
-    
+
     friend class StreamingGenerator;
 };
 
@@ -512,93 +510,79 @@ std::vector<IDX> BuildVertexDistribution(const Graph& graph, MPI_Datatype idx_mp
 namespace kagen {
 class StreamingGenerator {
 public:
-  StreamingGenerator(MPI_Comm comm, int chunks);
-  void streamVertex(unsigned int vertex, MPI_Comm comm, std::vector<unsigned int>& neighbors);
-  std::pair<unsigned int, std::vector<unsigned int>>
-  getNextVertex(MPI_Comm comm, unsigned int vertex);
-  std::pair<unsigned int, std::vector<unsigned int>>
-  generateVertex(MPI_Comm comm);
-  void generateNextChunk(int chunk_number, MPI_Comm comm);
-  void buildChunkMap();
+    StreamingGenerator(MPI_Comm comm, int chunks);
+    void streamVertex(unsigned int vertex, MPI_Comm comm, std::vector<unsigned int>& neighbors);
+    std::pair<unsigned int, std::vector<unsigned int>> getNextVertex(MPI_Comm comm, unsigned int vertex);
+    std::pair<unsigned int, std::vector<unsigned int>> generateVertex(MPI_Comm comm);
+    void                                               generateNextChunk(int chunk_number, MPI_Comm comm);
+    void                                               buildChunkMap();
 
-  void setRandomSeed(int seed);
+    void setRandomSeed(int seed);
 
-  NodeID estimate_edges();
+    NodeID estimate_edges();
 
-  void setupConfig_GNP_UNDIRECTED(const SInt n, const LPFloat p,
-                                  const bool self_loops);
+    void setupConfig_GNP_UNDIRECTED(const SInt n, const LPFloat p, const bool self_loops);
 
-  void setupConfig_GNM_UNDIRECTED(const SInt n, const SInt m,
-                                  const bool self_loops);
+    void setupConfig_GNM_UNDIRECTED(const SInt n, const SInt m, const bool self_loops);
 
-  void setupConfig_RGG2D(const SInt n, const SInt m, const LPFloat r,
-                         const bool coordinates);
+    void setupConfig_RGG2D(const SInt n, const SInt m, const LPFloat r, const bool coordinates);
 
-  void setupConfig_RGG2D_NM(const SInt n, const SInt m, const LPFloat r,
-                            const bool coordinates);
+    void setupConfig_RGG2D_M(const SInt n, const SInt m, const LPFloat r, const bool coordinates);
 
-  void setupConfig_RGG3D(const SInt n, const SInt m, const LPFloat r,
-                         const bool coordiantes);
+    void setupConfig_RGG2D_NM(const SInt n, const SInt m, const LPFloat r, const bool coordinates);
 
-  void setupConfig_RGG3D_NM(const SInt n, const SInt m, const LPFloat r,
-                            const bool coordinates);
+    void setupConfig_RGG3D(const SInt n, const SInt m, const LPFloat r, const bool coordiantes);
 
-  void setupConfig_RDG2D(const SInt n, const SInt m, const bool periodic,
-                         const bool coordinates);
+    void setupConfig_RGG3D_NM(const SInt n, const SInt m, const LPFloat r, const bool coordinates);
 
-  void setupConfig_RDG3D(const SInt n, const SInt m, const bool coordinates);
+    void setupConfig_RDG2D(const SInt n, const SInt m, const bool periodic, const bool coordinates);
 
-  void setupConfig_BA(const SInt n, const SInt m, const SInt d,
-                      const bool self_loops = false,
-                      const bool directed = false);
+    void setupConfig_RDG3D(const SInt n, const SInt m, const bool coordinates);
 
-  void setupConfig_BA_NM(const SInt n, const SInt m, const SInt d,
-                         const bool self_loops = false,
-                         const bool directed = false);
+    void setupConfig_BA(
+        const SInt n, const SInt m, const SInt d, const bool self_loops = false, const bool directed = false);
 
-  void setupConfig_RHG(const SInt n, const SInt m, const LPFloat d,
-                       const LPFloat gamma, const bool coordinates);
+    void setupConfig_BA_NM(
+        const SInt n, const SInt m, const SInt d, const bool self_loops = false, const bool directed = false);
 
-  void setupConfig_RHG_NM(const SInt n, const SInt m, const LPFloat d,
-                          const LPFloat gamma, const bool coordinates);
+    void setupConfig_RHG(const SInt n, const SInt m, const LPFloat d, const LPFloat gamma, const bool coordinates);
 
-  void setupConfig_GRID_2D_N(const SInt grid_x, const SInt grid_y,
-                             const LPFloat p, const SInt n, const SInt m,
-                             const bool periodic, const bool coordinates);
+    void setupConfig_RHG_NM(const SInt n, const SInt m, const LPFloat d, const LPFloat gamma, const bool coordinates);
 
-  void setupConfig_GRID_2D_NM(const SInt grid_x, const SInt grid_y,
-                              const LPFloat p, const SInt n, const SInt m,
-                              const bool periodic, const bool coordinates);
+    void setupConfig_GRID_2D_N(
+        const SInt grid_x, const SInt grid_y, const LPFloat p, const SInt n, const SInt m, const bool periodic,
+        const bool coordinates);
 
-  void setupConfig_KRONECKER(const SInt n, const SInt m,
-                             const bool directed = false,
-                             const bool self_loops = false);
+    void setupConfig_GRID_2D_NM(
+        const SInt grid_x, const SInt grid_y, const LPFloat p, const SInt n, const SInt m, const bool periodic,
+        const bool coordinates);
 
-  void setupConfig_RMAT(const SInt n, const SInt m, const LPFloat rmat_a,
-                        const LPFloat rmat_b, const LPFloat rmat_c,
-                        const bool directed = false,
-                        const bool self_loops = false);
+    void setupConfig_KRONECKER(const SInt n, const SInt m, const bool directed = false, const bool self_loops = false);
 
-  void setupChunkGeneration(MPI_Comm comm);
-  void determineStartandFinishingTime(MPI_Comm comm);
-  bool isChunkEmpty(unsigned int vertex);
+    void setupConfig_RMAT(
+        const SInt n, const SInt m, const LPFloat rmat_a, const LPFloat rmat_b, const LPFloat rmat_c,
+        const bool directed = false, const bool self_loops = false);
+
+    void setupChunkGeneration(MPI_Comm comm);
+    void determineStartandFinishingTime(MPI_Comm comm);
+    bool isChunkEmpty(unsigned int vertex);
 
 private:
-  KaGen generator;
-  int total_chunks;
-  int current_chunk;
-  int nextChunkToBuild;
-  Graph chunk_graph;
-  std::map<unsigned int, std::vector<unsigned int>> chunk_map;
-  long max_chunk_vertex;
-  //NodeID edgeEstimation;
-  std::vector<SInt> vertex_distribution;
-  std::map<unsigned int, std::vector<unsigned int>>::iterator chunk_iterator;
-  std::map<unsigned int, std::vector<unsigned int>> lost_edges;
-  std::vector<std::pair<unsigned int, std::vector<unsigned int>>> part_graph;
-  int part_graph_chunk_counter;
-  SInt start;
-  SInt end;
+    KaGen                                             generator;
+    int                                               total_chunks;
+    int                                               current_chunk;
+    int                                               nextChunkToBuild;
+    Graph                                             chunk_graph;
+    std::map<unsigned int, std::vector<unsigned int>> chunk_map;
+    long                                              max_chunk_vertex;
+    // long                                                            edgeEstimation;
+    std::vector<SInt>                                               vertex_distribution;
+    std::map<unsigned int, std::vector<unsigned int>>::iterator     chunk_iterator;
+    std::map<unsigned int, std::vector<unsigned int>>               lost_edges;
+    std::vector<std::pair<unsigned int, std::vector<unsigned int>>> part_graph;
+    int                                                             part_graph_chunk_counter;
+    SInt                                                            start;
+    SInt                                                            end;
 };
 } // namespace kagen
 #endif

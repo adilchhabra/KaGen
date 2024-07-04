@@ -10,6 +10,9 @@ target_link_libraries(example_cpp_rhg PRIVATE KaGen::KaGen)
 add_executable(example_cpp_rgg2d rgg2d_cpp_example.cpp)
 target_link_libraries(example_cpp_rgg2d PRIVATE KaGen::KaGen)
 
+add_executable(example_cpp_rgg2dM rgg2dM_cpp_example.cpp)
+target_link_libraries(example_cpp_rgg2dM PRIVATE KaGen::KaGen)
+
 add_executable(example_cpp_rgg3d rgg3d_cpp_example.cpp)
 target_link_libraries(example_cpp_rgg3d PRIVATE KaGen::KaGen)
 

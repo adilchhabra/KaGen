@@ -1,10 +1,10 @@
 #include "kagen.h"
-#include "streaming.h"
 
 #include "kagen/context.h"
-#include "kagen/in_memory_facade.h"
 #include "kagen/factories.h"
+#include "kagen/in_memory_facade.h"
 
+#include "streaming.h"
 #include <cmath>
 #include <numeric>
 #include <sstream>
@@ -765,520 +765,508 @@ void KaGen::SetDefaults() {
 } // namespace kagen
 namespace kagen {
 StreamingKaGen::StreamingKaGen(MPI_Comm comm)
-    : comm_(comm), config_(std::make_unique<PGeneratorConfig>()),
+    : comm_(comm),
+      config_(std::make_unique<PGeneratorConfig>()),
       representation_(GraphRepresentation::EDGE_LIST) {
-  SetDefaults();
+    SetDefaults();
 }
 
 void StreamingKaGen::SetDefaults() {
-  config_->quiet = true;
-  config_->output_graph.formats.clear();
-  // keep all other defaults
+    config_->quiet = true;
+    config_->output_graph.formats.clear();
+    // keep all other defaults
 }
 
 StreamingGenerator::StreamingGenerator(MPI_Comm comm, int chunks)
-    : generator(comm), total_chunks(chunks), max_chunk_vertex(0),
-      part_graph_chunk_counter(0), current_chunk(0), nextChunkToBuild(0) {
-  vertex_distribution.resize(chunks);
+    : generator(comm),
+      total_chunks(chunks),
+      max_chunk_vertex(0),
+      part_graph_chunk_counter(0),
+      current_chunk(0),
+      nextChunkToBuild(0) {
+    vertex_distribution.resize(chunks);
 }
 
-std::pair<unsigned int, std::vector<unsigned int>>
-StreamingGenerator::generateVertex(MPI_Comm comm) {
-  if (nextChunkToBuild == 0) {
-    std::cout << "Generate first chunk" << std::endl;
-    generateNextChunk(0, comm);
-    current_chunk = 0;
-    nextChunkToBuild = 1;
-    buildChunkMap();
-    for (const auto &[Node, adj] : chunk_map) {
-      part_graph.emplace_back(Node, adj);
-    }
-    if (part_graph_chunk_counter < part_graph.size()) {
-      int part_graph_chunk_counter_old = part_graph_chunk_counter;
-      part_graph_chunk_counter++;
-      return part_graph[part_graph_chunk_counter_old];
+std::pair<unsigned int, std::vector<unsigned int>> StreamingGenerator::generateVertex(MPI_Comm comm) {
+    if (nextChunkToBuild == 0) {
+        std::cout << "Generate first chunk" << std::endl;
+        generateNextChunk(0, comm);
+        current_chunk    = 0;
+        nextChunkToBuild = 1;
+        buildChunkMap();
+        for (const auto& [Node, adj]: chunk_map) {
+            part_graph.emplace_back(Node, adj);
+        }
+        if (part_graph_chunk_counter < part_graph.size()) {
+            int part_graph_chunk_counter_old = part_graph_chunk_counter;
+            part_graph_chunk_counter++;
+            return part_graph[part_graph_chunk_counter_old];
+        } else {
+            // TODO: handle empty_chunk;
+        }
+    } else if (part_graph_chunk_counter >= part_graph.size()) {
+        if (!(nextChunkToBuild > total_chunks)) {
+            std::cout << "Generate first chunk" << std::endl;
+            generateNextChunk(nextChunkToBuild, comm);
+            current_chunk++;
+            nextChunkToBuild++;
+            buildChunkMap();
+            part_graph.clear();
+            part_graph_chunk_counter = 0;
+            for (const auto& [Node, adj]: chunk_map) {
+                part_graph.emplace_back(Node, adj);
+            }
+            if (part_graph_chunk_counter < part_graph.size()) {
+                int part_graph_chunk_counter_old = part_graph_chunk_counter;
+                part_graph_chunk_counter++;
+                return part_graph[part_graph_chunk_counter_old];
+            } else {
+                // TODO: handle empty_chunk;
+            }
+        }
     } else {
-      // TODO: handle empty_chunk;
-    }
-  } else if (part_graph_chunk_counter >= part_graph.size()) {
-    if (!(nextChunkToBuild > total_chunks)) {
-      std::cout << "Generate first chunk" << std::endl;
-      generateNextChunk(nextChunkToBuild, comm);
-      current_chunk++;
-      nextChunkToBuild++;
-      buildChunkMap();
-      part_graph.clear();
-      part_graph_chunk_counter = 0;
-      for (const auto &[Node, adj] : chunk_map) {
-        part_graph.emplace_back(Node, adj);
-      }
-      if (part_graph_chunk_counter < part_graph.size()) {
         int part_graph_chunk_counter_old = part_graph_chunk_counter;
         part_graph_chunk_counter++;
         return part_graph[part_graph_chunk_counter_old];
-      } else {
-        // TODO: handle empty_chunk;
-      }
     }
-  } else {
-    int part_graph_chunk_counter_old = part_graph_chunk_counter;
-    part_graph_chunk_counter++;
-    return part_graph[part_graph_chunk_counter_old];
-  }
 }
 
 // make sure empty vector is given.
 void StreamingGenerator::streamVertex(unsigned int vertex, MPI_Comm comm, std::vector<unsigned int>& neighbors) {
-  //std::vector<unsigned int> neighbors;
-  if (vertex == 1) { // this is we are starting the stream
-    // for (unsigned int k = 0; k < vertex_distribution.size(); k++) {
-    //   std::cout << vertex_distribution[k] << std::endl;
-    // }
-    // std::cout << "Generate first chunk" << std::endl;
-    generateNextChunk(0, comm);
-    current_chunk = 0;
-    nextChunkToBuild = 1;
-    buildChunkMap();
-  } else if (isChunkEmpty(vertex)) { // we have to generate the next chunk
-    // std::cout << "Generate next chunk" << std::endl;
-    generateNextChunk(nextChunkToBuild, comm);
-    buildChunkMap();
-    current_chunk++;
-    nextChunkToBuild++;
-  }
-
-  auto it = chunk_map.find(vertex - 1);
-  auto it2 = lost_edges.find(vertex - 1);
-  if (it != chunk_map.end()) {
-    // std::cout << vertex << ": ";
-    for (unsigned int i = 0; i < chunk_map[vertex - 1].size(); i++) {
-      unsigned int neigh = chunk_map[vertex - 1][i] + 1;
-      if (vertex > neigh) {
-        // std::cout << chunk_map[vertex - 1][i] + 1 << " ";
-        neighbors.push_back(chunk_map[vertex - 1][i] + 1);
-      }
+    // std::vector<unsigned int> neighbors;
+    if (vertex == 1) { // this is we are starting the stream
+        // for (unsigned int k = 0; k < vertex_distribution.size(); k++) {
+        //   std::cout << vertex_distribution[k] << std::endl;
+        // }
+        // std::cout << "Generate first chunk" << std::endl;
+        generateNextChunk(0, comm);
+        current_chunk    = 0;
+        nextChunkToBuild = 1;
+        buildChunkMap();
+    } else if (isChunkEmpty(vertex)) { // we have to generate the next chunk
+        // std::cout << "Generate next chunk" << std::endl;
+        generateNextChunk(nextChunkToBuild, comm);
+        buildChunkMap();
+        current_chunk++;
+        nextChunkToBuild++;
     }
-    if (it2 != lost_edges.end()) {
-      for (unsigned int j = 0; j < lost_edges[vertex - 1].size(); j++) {
-        unsigned int neigh = lost_edges[vertex - 1][j];
-        if (neigh < vertex) {
-          // std::cout << lost_edges[vertex - 1][j] + 1 << " ";
-          neighbors.push_back(lost_edges[vertex - 1][j] + 1);
+
+    auto it  = chunk_map.find(vertex - 1);
+    auto it2 = lost_edges.find(vertex - 1);
+    if (it != chunk_map.end()) {
+        // std::cout << vertex << ": ";
+        for (unsigned int i = 0; i < chunk_map[vertex - 1].size(); i++) {
+            unsigned int neigh = chunk_map[vertex - 1][i] + 1;
+            if (vertex > neigh) {
+                // std::cout << chunk_map[vertex - 1][i] + 1 << " ";
+                neighbors.push_back(chunk_map[vertex - 1][i] + 1);
+            }
         }
-      }
+        if (it2 != lost_edges.end()) {
+            for (unsigned int j = 0; j < lost_edges[vertex - 1].size(); j++) {
+                unsigned int neigh = lost_edges[vertex - 1][j];
+                if (neigh < vertex) {
+                    // std::cout << lost_edges[vertex - 1][j] + 1 << " ";
+                    neighbors.push_back(lost_edges[vertex - 1][j] + 1);
+                }
+            }
+        }
+        // std::cout << std::endl;
+    } else if (it2 != lost_edges.end()) {
+        // std::cout << vertex << ": ";
+        for (unsigned int j = 0; j < lost_edges[vertex - 1].size(); j++) {
+            unsigned int neigh = lost_edges[vertex - 1][j];
+            if (neigh + 1 < vertex) {
+                // std::cout << lost_edges[vertex - 1][j] + 1 << " ";
+                neighbors.push_back(lost_edges[vertex - 1][j] + 1);
+            }
+        }
+        // std::cout << std::endl;
+    } else {
+        // std::cout << vertex
+        //           << ": No neighbors to this vertex with smaller NodeID so far"
+        //           << std::endl;
     }
-    // std::cout << std::endl;
-  } else if (it2 != lost_edges.end()) {
-    // std::cout << vertex << ": ";
-    for (unsigned int j = 0; j < lost_edges[vertex - 1].size(); j++) {
-      unsigned int neigh = lost_edges[vertex - 1][j];
-      if (neigh + 1 < vertex) {
-        // std::cout << lost_edges[vertex - 1][j] + 1 << " ";
-        neighbors.push_back(lost_edges[vertex - 1][j] + 1);
-      }
-    }
-    // std::cout << std::endl;
-  } else {
-    // std::cout << vertex
-    //           << ": No neighbors to this vertex with smaller NodeID so far"
-    //           << std::endl;
-  }
-  // make neighbors unique but think about optimizations
-  std::sort(neighbors.begin(), neighbors.end());
-  auto last = std::unique(neighbors.begin(), neighbors.end());
-  neighbors.erase(last, neighbors.end());
+    // make neighbors unique but think about optimizations
+    std::sort(neighbors.begin(), neighbors.end());
+    auto last = std::unique(neighbors.begin(), neighbors.end());
+    neighbors.erase(last, neighbors.end());
 
-//	for(unsigned int u = 0; u < neighbors.size(); u++) {
-//		neighbors[u]--;
-//	}
+    //	for(unsigned int u = 0; u < neighbors.size(); u++) {
+    //		neighbors[u]--;
+    //	}
 
-  //return neighbors;
+    // return neighbors;
 }
 
 bool StreamingGenerator::isChunkEmpty(unsigned int vertex) {
-  if (generator.getConfig()->generator == GeneratorType::RHG) {
-    if (vertex == end + 1) {
-      return true;
+    if (generator.getConfig()->generator == GeneratorType::RHG) {
+        if (vertex == end + 1) {
+            return true;
+        }
+    } else {
+        if (vertex > max_chunk_vertex + 1) {
+            return true;
+        }
     }
-  } else {
-    if (vertex > max_chunk_vertex + 1) {
-      return true;
-    }
-  }
-  return false;
+    return false;
 }
 
 std::pair<unsigned int, std::vector<unsigned int>>
 StreamingGenerator::getNextVertex(MPI_Comm comm, unsigned int vertex) {
-  if (vertex == 0) {
-    std::cout << "Generate first chunk" << std::endl;
-    generateNextChunk(0, comm);
-    current_chunk = 0;
-    nextChunkToBuild = 1;
-    buildChunkMap();
-    chunk_iterator = chunk_map.begin();
-  } else if (chunk_iterator == chunk_map.end()) {
-    std::cout << "Generate next chunk" << std::endl;
-    generateNextChunk(nextChunkToBuild, comm);
-    buildChunkMap();
-    chunk_iterator = chunk_map.begin();
-    current_chunk++;
-    nextChunkToBuild++;
-  }
+    if (vertex == 0) {
+        std::cout << "Generate first chunk" << std::endl;
+        generateNextChunk(0, comm);
+        current_chunk    = 0;
+        nextChunkToBuild = 1;
+        buildChunkMap();
+        chunk_iterator = chunk_map.begin();
+    } else if (chunk_iterator == chunk_map.end()) {
+        std::cout << "Generate next chunk" << std::endl;
+        generateNextChunk(nextChunkToBuild, comm);
+        buildChunkMap();
+        chunk_iterator = chunk_map.begin();
+        current_chunk++;
+        nextChunkToBuild++;
+    }
 
-  std::pair<unsigned int, std::vector<unsigned int>> adj_pair = *chunk_iterator;
-  ++chunk_iterator;
-  return adj_pair;
+    std::pair<unsigned int, std::vector<unsigned int>> adj_pair = *chunk_iterator;
+    ++chunk_iterator;
+    return adj_pair;
 }
 
 void StreamingGenerator::buildChunkMap() {
-  chunk_map.clear();
-  for (const auto &[from, to] : chunk_graph.edges) {
-    if (generator.getConfig()->streaming_remove_self_loops && from == to) {
-      continue;
-    }
-    // std::cout << from << ", " << to << std::endl;
-    //    if ((from + 1 == 15 && to + 1 == 8) || (from + 1 == 8 && to + 1 ==
-    //    15))
-    //    {
-    //      std::cout << "(" << from + 1 << "," << to + 1 << ")" << std::endl;
-    //      std::cout << start << " " << end << std::endl;
-    //    }
-    if (generator.getConfig()->generator == GeneratorType::RHG) {
-      if (from > end) {
-        lost_edges[from].push_back(to);
-        // std::cout << "Found lost edge (" << from + 1 << "," << to + 1 << ")"
-        //           << std::endl;
-      } else if (to > end) {
-        lost_edges[to].push_back(from);
-        // std::cout << "Found lost edge (" << to + 1 << "," << from + 1 << ")"
-        //           << std::endl;
-      } else if (from == end ||
-                 to == end) { // that must be in lost edges as well
-        if (from > to) {
-          lost_edges[from].push_back(to);
+    chunk_map.clear();
+    for (const auto& [from, to]: chunk_graph.edges) {
+        if (generator.getConfig()->streaming_remove_self_loops && from == to) {
+            continue;
+        }
+        // std::cout << from << ", " << to << std::endl;
+        //    if ((from + 1 == 15 && to + 1 == 8) || (from + 1 == 8 && to + 1 ==
+        //    15))
+        //    {
+        //      std::cout << "(" << from + 1 << "," << to + 1 << ")" << std::endl;
+        //      std::cout << start << " " << end << std::endl;
+        //    }
+        if (generator.getConfig()->generator == GeneratorType::RHG) {
+            if (from > end) {
+                lost_edges[from].push_back(to);
+                // std::cout << "Found lost edge (" << from + 1 << "," << to + 1 << ")"
+                //           << std::endl;
+            } else if (to > end) {
+                lost_edges[to].push_back(from);
+                // std::cout << "Found lost edge (" << to + 1 << "," << from + 1 << ")"
+                //           << std::endl;
+            } else if (from == end || to == end) { // that must be in lost edges as well
+                if (from > to) {
+                    lost_edges[from].push_back(to);
+                } else {
+                    lost_edges[to].push_back(from);
+                }
+            } else if (from > to) {
+                // if ((from + 1 == 15 && to + 1 == 8) || (from + 1 == 8 && to + 1 ==
+                // 15))
+                // {
+                //   std::cout << "(" << from + 1 << "," << to + 1 << ")" << std::endl;
+                //   std::cout << start << " " << end << std::endl;
+                // }
+                chunk_map[from].push_back(to);
+                // chunk_map[to].push_back(from);
+                if (max_chunk_vertex < from) {
+                    max_chunk_vertex = from;
+                }
+                // std::cout << "Found edge (" << from + 1 << "," << to + 1 << ")"
+                //           << std::endl;
+            }
         } else {
-          lost_edges[to].push_back(from);
+            if (from > to) {
+                chunk_map[from].push_back(to);
+                // chunk_map[to].push_back(from);
+                if (max_chunk_vertex < from) {
+                    max_chunk_vertex = from;
+                }
+            }
         }
-      } else if (from > to) {
-        // if ((from + 1 == 15 && to + 1 == 8) || (from + 1 == 8 && to + 1 ==
-        // 15))
-        // {
-        //   std::cout << "(" << from + 1 << "," << to + 1 << ")" << std::endl;
-        //   std::cout << start << " " << end << std::endl;
-        // }
-        chunk_map[from].push_back(to);
-        // chunk_map[to].push_back(from);
-        if (max_chunk_vertex < from) {
-          max_chunk_vertex = from;
-        }
-        // std::cout << "Found edge (" << from + 1 << "," << to + 1 << ")"
-        //           << std::endl;
-      }
-    } else {
-      if (from > to) {
-        chunk_map[from].push_back(to);
-        // chunk_map[to].push_back(from);
-        if (max_chunk_vertex < from) {
-          max_chunk_vertex = from;
-        }
-      }
     }
-  }
 }
 
 void StreamingGenerator::generateNextChunk(int chunk_number, MPI_Comm comm) {
-  PEID chunk = chunk_number;
-  auto factory = CreateGeneratorFactory(generator.getConfig()->generator);
+    PEID chunk   = chunk_number;
+    auto factory = CreateGeneratorFactory(generator.getConfig()->generator);
 
-  try {
-    *generator.config_ = factory->NormalizeParameters(*generator.getConfig(), 0,
-                                                      total_chunks, true);
-  } catch (ConfigurationError &ex) {
-    std::cerr << "Error: " << ex.what() << "\n";
-    MPI_Barrier(comm);
-    MPI_Abort(comm, 1);
-  }
-
-  auto Generator = factory->Create(*generator.config_, chunk, total_chunks);
-
-  if (!generator.config_->quiet) {
-    std::cout << "Generating chunk " << (chunk + 1) << " / " << total_chunks
-              << std::flush;
-  }
-  Generator->Generate(GraphRepresentation::EDGE_LIST);
-  Graph graph = Generator->Take();
-
-  if (generator.config_->streaming_add_reverse_edges) {
-    // AddReverseEdges
-    for (auto &[from, to] : graph.edges) {
-      if (from > to) {
-        std::swap(from, to);
-      }
+    try {
+        *generator.config_ = factory->NormalizeParameters(*generator.getConfig(), 0, total_chunks, true);
+    } catch (ConfigurationError& ex) {
+        std::cerr << "Error: " << ex.what() << "\n";
+        MPI_Barrier(comm);
+        MPI_Abort(comm, 1);
     }
-    // RemoveMultiEdges
-    std::sort(graph.edges.begin(), graph.edges.end());
-    auto it = std::unique(graph.edges.begin(), graph.edges.end());
-    graph.edges.erase(it, graph.edges.end());
 
-    const std::size_t old_size = graph.edges.size();
-    for (std::size_t i = 0; i < old_size; ++i) {
-      const auto &[from, to] = graph.edges[i];
-      if (from != to) {
-        graph.edges.emplace_back(to, from);
-      }
+    auto Generator = factory->Create(*generator.config_, chunk, total_chunks);
+
+    if (!generator.config_->quiet) {
+        std::cout << "Generating chunk " << (chunk + 1) << " / " << total_chunks << std::flush;
     }
-  }
-  if (generator.getConfig()->generator == GeneratorType::RHG) {
-    start = graph.start_vertex_range;
-    end = graph.end_vertex_range;
-  } else {
-    // this for ba / rgg
-    start = vertex_distribution[chunk] - 1;
-    end = vertex_distribution[chunk + 1] - 2;
-  }
+    Generator->Generate(GraphRepresentation::EDGE_LIST);
+    Graph graph = Generator->Take();
 
-  chunk_graph = graph;
+    if (generator.config_->streaming_add_reverse_edges) {
+        // AddReverseEdges
+        for (auto& [from, to]: graph.edges) {
+            if (from > to) {
+                std::swap(from, to);
+            }
+        }
+        // RemoveMultiEdges
+        std::sort(graph.edges.begin(), graph.edges.end());
+        auto it = std::unique(graph.edges.begin(), graph.edges.end());
+        graph.edges.erase(it, graph.edges.end());
+
+        const std::size_t old_size = graph.edges.size();
+        for (std::size_t i = 0; i < old_size; ++i) {
+            const auto& [from, to] = graph.edges[i];
+            if (from != to) {
+                graph.edges.emplace_back(to, from);
+            }
+        }
+    }
+    if (generator.getConfig()->generator == GeneratorType::RHG) {
+        start = graph.start_vertex_range;
+        end   = graph.end_vertex_range;
+    } else {
+        // this for ba / rgg
+        start = vertex_distribution[chunk] - 1;
+        end   = vertex_distribution[chunk + 1] - 2;
+    }
+
+    chunk_graph = graph;
 }
 
 void StreamingGenerator::setupChunkGeneration(MPI_Comm comm) {
-  // Force sequential execution
-  PEID size;
-  MPI_Comm_size(comm, &size);
-  if (size != 1) {
-    std::cerr << "Error: streaming mode must be run sequentially\n";
-    MPI_Barrier(comm);
-    MPI_Abort(comm, 1);
-  }
+    // Force sequential execution
+    PEID size;
+    MPI_Comm_size(comm, &size);
+    if (size != 1) {
+        std::cerr << "Error: streaming mode must be run sequentially\n";
+        MPI_Barrier(comm);
+        MPI_Abort(comm, 1);
+    }
 
-  if (generator.getConfig()->n == 0) {
-    std::cerr << "Error: streaming mode requires the number of nodes to be "
-                 "given in advance\n";
-    MPI_Abort(comm, 1);
-  }
+    if (generator.getConfig()->n == 0) {
+        std::cerr << "Error: streaming mode requires the number of nodes to be "
+                     "given in advance\n";
+        MPI_Abort(comm, 1);
+    }
 
-  if (!generator.getConfig()->quiet && generator.getConfig()->print_header) {
-    std::cout << "TODO: Print a nice header maybe ..." << std::endl;
-  }
+    if (!generator.getConfig()->quiet && generator.getConfig()->print_header) {
+        std::cout << "TODO: Print a nice header maybe ..." << std::endl;
+    }
 
-  for (PEID chunk = 0; chunk < total_chunks; ++chunk) {
-    const SInt chunk_size = generator.getConfig()->n / total_chunks;
-    const SInt remainder = generator.getConfig()->n % total_chunks;
-    const SInt from = chunk * chunk_size + std::min<SInt>(chunk, remainder);
+    for (PEID chunk = 0; chunk < total_chunks; ++chunk) {
+        const SInt chunk_size = generator.getConfig()->n / total_chunks;
+        const SInt remainder  = generator.getConfig()->n % total_chunks;
+        const SInt from       = chunk * chunk_size + std::min<SInt>(chunk, remainder);
 
-    vertex_distribution[chunk + 1] = std::min<SInt>(
-        from + ((static_cast<SInt>(chunk) < remainder) ? chunk_size + 1
-                                                       : chunk_size),
-        generator.getConfig()->n);
-  }
+        vertex_distribution[chunk + 1] = std::min<SInt>(
+            from + ((static_cast<SInt>(chunk) < remainder) ? chunk_size + 1 : chunk_size), generator.getConfig()->n);
+    }
 }
 
 NodeID StreamingGenerator::estimate_edges() {
-  NodeID edges = 0;
-  unsigned int n = generator.config_->n;
-  if (generator.config_->generator == GeneratorType::BA) {
-    unsigned int d = generator.config_->min_degree;
-    edges = d * n;
-  } else if (generator.config_->generator == GeneratorType::RGG_2D) {
-    double tuning = 1.57;
-    double r = generator.config_->r;
-    edges =
-        round(static_cast<double>(n) * static_cast<double>(n) * r * r * tuning);
-  } else if (generator.config_->generator == GeneratorType::RGG_3D) {
-    double tuning = 1.8;
-    double r = generator.config_->r;
-    edges = round(static_cast<double>(n) * static_cast<double>(n) * r * r * r *
-                  tuning);
-  } else if (generator.config_->generator == GeneratorType::RDG_2D) {
-    edges = 3 * n;
-  } else if (generator.config_->generator == GeneratorType::RDG_3D) {
-    double tuning = 7.77;
-    edges = round(static_cast<double>(n) * tuning);
-  } else if (generator.config_->generator == GeneratorType::RHG) {
-    double avg_deg = generator.config_->avg_degree;
-    edges = round(static_cast<double>(n) * avg_deg * 0.5);
-  } else {
-    std::cout << "No estimator so far... returning zero." << std::endl;
-  }
-  return edges;
+    NodeID       edges = 0;
+    unsigned int n     = generator.config_->n;
+    if (generator.config_->generator == GeneratorType::BA) {
+        unsigned int d = generator.config_->min_degree;
+        edges          = d * n;
+    } else if (generator.config_->generator == GeneratorType::RGG_2D) {
+        double tuning = 1.57;
+        double r      = generator.config_->r;
+        edges         = round(static_cast<double>(n) * static_cast<double>(n) * r * r * tuning);
+    } else if (generator.config_->generator == GeneratorType::RGG_3D) {
+        double tuning = 1.8;
+        double r      = generator.config_->r;
+        edges         = round(static_cast<double>(n) * static_cast<double>(n) * r * r * r * tuning);
+    } else if (generator.config_->generator == GeneratorType::RDG_2D) {
+        edges = 3 * n;
+    } else if (generator.config_->generator == GeneratorType::RDG_3D) {
+        double tuning = 7.77;
+        edges         = round(static_cast<double>(n) * tuning);
+    } else if (generator.config_->generator == GeneratorType::RHG) {
+        double avg_deg = generator.config_->avg_degree;
+        edges          = round(static_cast<double>(n) * avg_deg * 0.5);
+    } else {
+        std::cout << "No estimator so far... returning zero." << std::endl;
+    }
+    return edges;
 }
 
 void StreamingGenerator::setRandomSeed(int seed) {
-  generator.config_->seed = seed;
+    generator.config_->seed = seed;
 }
 
-void StreamingGenerator::setupConfig_GNP_UNDIRECTED(const SInt n,
-                                                    const LPFloat p,
-                                                    const bool self_loops) {
-  generator.config_->generator = GeneratorType::GNP_UNDIRECTED;
-  generator.config_->n = n;
-  generator.config_->p = p;
-  generator.config_->self_loops = self_loops;
-  generator.config_->adil_mode = total_chunks;
+void StreamingGenerator::setupConfig_GNP_UNDIRECTED(const SInt n, const LPFloat p, const bool self_loops) {
+    generator.config_->generator  = GeneratorType::GNP_UNDIRECTED;
+    generator.config_->n          = n;
+    generator.config_->p          = p;
+    generator.config_->self_loops = self_loops;
+    generator.config_->adil_mode  = total_chunks;
 }
 
-void StreamingGenerator::setupConfig_GNM_UNDIRECTED(const SInt n, const SInt m,
-                                                    const bool self_loops) {
-  generator.config_->generator = GeneratorType::GNM_UNDIRECTED;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->self_loops = self_loops;
-  generator.config_->adil_mode = total_chunks;
+void StreamingGenerator::setupConfig_GNM_UNDIRECTED(const SInt n, const SInt m, const bool self_loops) {
+    generator.config_->generator  = GeneratorType::GNM_UNDIRECTED;
+    generator.config_->n          = n;
+    generator.config_->m          = m;
+    generator.config_->self_loops = self_loops;
+    generator.config_->adil_mode  = total_chunks;
 }
 
-void StreamingGenerator::setupConfig_RGG2D(const SInt n, const SInt m,
-                                           const LPFloat r,
-                                           const bool coordinates) {
-  generator.config_->generator = GeneratorType::RGG_2D;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->r = r;
-  generator.config_->coordinates = coordinates;
-  generator.config_->adil_mode = total_chunks;
+void StreamingGenerator::setupConfig_RGG2D(const SInt n, const SInt m, const LPFloat r, const bool coordinates) {
+    generator.config_->generator   = GeneratorType::RGG_2D;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->r           = r;
+    generator.config_->coordinates = coordinates;
+    generator.config_->adil_mode   = total_chunks;
 }
 
-void StreamingGenerator::setupConfig_RGG2D_NM(const SInt n, const SInt m,
-                                              const LPFloat r,
-                                              const bool coordinates) {
-  generator.config_->generator = GeneratorType::RGG_2D;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->r = r;
-  generator.config_->coordinates = coordinates;
-  generator.config_->adil_mode = total_chunks;
+void StreamingGenerator::setupConfig_RGG2D_M(const SInt n, const SInt m, const LPFloat r, const bool coordinates) {
+    generator.config_->generator = GeneratorType::RGG_2D;
+    generator.config_->n         = n;
+    generator.config_->m         = 0;
+    double denom                 = static_cast<double>(n) * n * 1.57;
+    double radius                = std::sqrt(m / denom);
+    std::cout << radius << std::endl;
+    generator.config_->r           = radius;
+    generator.config_->coordinates = coordinates;
+    generator.config_->adil_mode   = total_chunks;
 }
 
-void StreamingGenerator::setupConfig_RGG3D(const SInt n, const SInt m,
-                                           const LPFloat r,
-                                           const bool coordinates) {
-  generator.config_->generator = GeneratorType::RGG_3D;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->r = r;
-  generator.config_->coordinates = coordinates;
-  generator.config_->adil_mode = total_chunks;
+void StreamingGenerator::setupConfig_RGG2D_NM(const SInt n, const SInt m, const LPFloat r, const bool coordinates) {
+    generator.config_->generator   = GeneratorType::RGG_2D;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->r           = r;
+    generator.config_->coordinates = coordinates;
+    generator.config_->adil_mode   = total_chunks;
 }
 
-void StreamingGenerator::setupConfig_RGG3D_NM(const SInt n, const SInt m,
-                                              const LPFloat r,
-                                              const bool coordinates) {
-  generator.config_->generator = GeneratorType::RGG_3D;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->r = r;
-  generator.config_->coordinates = coordinates;
-  generator.config_->adil_mode = total_chunks;
+void StreamingGenerator::setupConfig_RGG3D(const SInt n, const SInt m, const LPFloat r, const bool coordinates) {
+    generator.config_->generator   = GeneratorType::RGG_3D;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->r           = r;
+    generator.config_->coordinates = coordinates;
+    generator.config_->adil_mode   = total_chunks;
 }
 
-void StreamingGenerator::setupConfig_RDG2D(const SInt n, const SInt m,
-                                           const bool periodic,
-                                           const bool coordinates) {
-  generator.config_->generator = GeneratorType::RDG_2D;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->periodic = periodic;
-  generator.config_->coordinates = coordinates;
+void StreamingGenerator::setupConfig_RGG3D_NM(const SInt n, const SInt m, const LPFloat r, const bool coordinates) {
+    generator.config_->generator   = GeneratorType::RGG_3D;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->r           = r;
+    generator.config_->coordinates = coordinates;
+    generator.config_->adil_mode   = total_chunks;
 }
 
-void StreamingGenerator::setupConfig_RDG3D(const SInt n, const SInt m,
-                                           const bool coordinates) {
-  generator.config_->generator = GeneratorType::RDG_3D;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->coordinates = coordinates;
+void StreamingGenerator::setupConfig_RDG2D(const SInt n, const SInt m, const bool periodic, const bool coordinates) {
+    generator.config_->generator   = GeneratorType::RDG_2D;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->periodic    = periodic;
+    generator.config_->coordinates = coordinates;
 }
 
-void StreamingGenerator::setupConfig_BA(const SInt n, const SInt m,
-                                        const SInt d, const bool self_loops,
-                                        const bool directed) {
-  generator.config_->generator = GeneratorType::BA;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->min_degree = d;
-  generator.config_->self_loops = self_loops;
-  generator.config_->directed = directed;
+void StreamingGenerator::setupConfig_RDG3D(const SInt n, const SInt m, const bool coordinates) {
+    generator.config_->generator   = GeneratorType::RDG_3D;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->coordinates = coordinates;
 }
 
-void StreamingGenerator::setupConfig_BA_NM(const SInt n, const SInt m,
-                                           const SInt d, const bool self_loops,
-                                           const bool directed) {
-  generator.config_->generator = GeneratorType::BA;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->min_degree = d;
-  generator.config_->self_loops = self_loops;
-  generator.config_->directed = directed;
+void StreamingGenerator::setupConfig_BA(
+    const SInt n, const SInt m, const SInt d, const bool self_loops, const bool directed) {
+    generator.config_->generator  = GeneratorType::BA;
+    generator.config_->n          = n;
+    generator.config_->m          = m;
+    generator.config_->min_degree = d;
+    generator.config_->self_loops = self_loops;
+    generator.config_->directed   = directed;
 }
 
-void StreamingGenerator::setupConfig_RHG(const SInt n, const SInt m,
-                                         const LPFloat d, const LPFloat gamma,
-                                         const bool coordinates) {
-  generator.config_->generator = GeneratorType::RHG;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->avg_degree = d;
-  generator.config_->plexp = gamma;
-  generator.config_->coordinates = coordinates;
+void StreamingGenerator::setupConfig_BA_NM(
+    const SInt n, const SInt m, const SInt d, const bool self_loops, const bool directed) {
+    generator.config_->generator  = GeneratorType::BA;
+    generator.config_->n          = n;
+    generator.config_->m          = m;
+    generator.config_->min_degree = d;
+    generator.config_->self_loops = self_loops;
+    generator.config_->directed   = directed;
 }
 
-void StreamingGenerator::setupConfig_RHG_NM(const SInt n, const SInt m,
-                                            const LPFloat d,
-                                            const LPFloat gamma,
-                                            const bool coordinates) {
-  generator.config_->generator = GeneratorType::RHG;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->avg_degree = d;
-  generator.config_->plexp = gamma;
-  generator.config_->coordinates = coordinates;
+void StreamingGenerator::setupConfig_RHG(
+    const SInt n, const SInt m, const LPFloat d, const LPFloat gamma, const bool coordinates) {
+    generator.config_->generator   = GeneratorType::RHG;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->avg_degree  = d;
+    generator.config_->plexp       = gamma;
+    generator.config_->coordinates = coordinates;
+}
+
+void StreamingGenerator::setupConfig_RHG_NM(
+    const SInt n, const SInt m, const LPFloat d, const LPFloat gamma, const bool coordinates) {
+    generator.config_->generator   = GeneratorType::RHG;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->avg_degree  = d;
+    generator.config_->plexp       = gamma;
+    generator.config_->coordinates = coordinates;
 }
 
 void StreamingGenerator::setupConfig_GRID_2D_N(
-    const SInt grid_x, const SInt grid_y, const LPFloat p, const SInt n,
-    const SInt m, const bool periodic, const bool coordinates) {
-  generator.config_->generator = GeneratorType::GRID_2D;
-  generator.config_->grid_x = grid_x;
-  generator.config_->grid_y = grid_y;
-  generator.config_->p = p;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->periodic = periodic;
-  generator.config_->coordinates = coordinates;
+    const SInt grid_x, const SInt grid_y, const LPFloat p, const SInt n, const SInt m, const bool periodic,
+    const bool coordinates) {
+    generator.config_->generator   = GeneratorType::GRID_2D;
+    generator.config_->grid_x      = grid_x;
+    generator.config_->grid_y      = grid_y;
+    generator.config_->p           = p;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->periodic    = periodic;
+    generator.config_->coordinates = coordinates;
 }
 
 void StreamingGenerator::setupConfig_GRID_2D_NM(
-    const SInt grid_x, const SInt grid_y, const LPFloat p, const SInt n,
-    const SInt m, const bool periodic, const bool coordinates) {
-  generator.config_->generator = GeneratorType::GRID_2D;
-  generator.config_->grid_x = grid_x;
-  generator.config_->grid_y = grid_y;
-  generator.config_->p = p;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->periodic = periodic;
-  generator.config_->coordinates = coordinates;
+    const SInt grid_x, const SInt grid_y, const LPFloat p, const SInt n, const SInt m, const bool periodic,
+    const bool coordinates) {
+    generator.config_->generator   = GeneratorType::GRID_2D;
+    generator.config_->grid_x      = grid_x;
+    generator.config_->grid_y      = grid_y;
+    generator.config_->p           = p;
+    generator.config_->n           = n;
+    generator.config_->m           = m;
+    generator.config_->periodic    = periodic;
+    generator.config_->coordinates = coordinates;
 }
 
-void StreamingGenerator::setupConfig_KRONECKER(const SInt n, const SInt m,
-                                               const bool directed,
-                                               const bool self_loops) {
-  generator.config_->generator = GeneratorType::KRONECKER;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->directed = directed;
-  generator.config_->self_loops = self_loops;
+void StreamingGenerator::setupConfig_KRONECKER(const SInt n, const SInt m, const bool directed, const bool self_loops) {
+    generator.config_->generator  = GeneratorType::KRONECKER;
+    generator.config_->n          = n;
+    generator.config_->m          = m;
+    generator.config_->directed   = directed;
+    generator.config_->self_loops = self_loops;
 }
 
 void StreamingGenerator::setupConfig_RMAT(
-    const SInt n, const SInt m, const LPFloat rmat_a, const LPFloat rmat_b,
-    const LPFloat rmat_c, const bool directed, const bool self_loops) {
-  generator.config_->generator = GeneratorType::RMAT;
-  generator.config_->n = n;
-  generator.config_->m = m;
-  generator.config_->rmat_a = rmat_a;
-  generator.config_->rmat_b = rmat_b;
-  generator.config_->rmat_c = rmat_c;
-  generator.config_->directed = directed;
-  generator.config_->self_loops = self_loops;
+    const SInt n, const SInt m, const LPFloat rmat_a, const LPFloat rmat_b, const LPFloat rmat_c, const bool directed,
+    const bool self_loops) {
+    generator.config_->generator  = GeneratorType::RMAT;
+    generator.config_->n          = n;
+    generator.config_->m          = m;
+    generator.config_->rmat_a     = rmat_a;
+    generator.config_->rmat_b     = rmat_b;
+    generator.config_->rmat_c     = rmat_c;
+    generator.config_->directed   = directed;
+    generator.config_->self_loops = self_loops;
 }
 } // namespace kagen
