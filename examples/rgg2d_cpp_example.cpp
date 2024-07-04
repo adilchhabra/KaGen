@@ -28,7 +28,11 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  unsigned int n = std::stoi(argv[1]);
+  long long n_in = std::stoll(argv[1]);
+  if (n_in < 0 || n_in > std::numeric_limits<unsigned int>::max()) {
+		  throw std::out_of_range("Value is out of range for an unsigned int");
+  }
+  unsigned int n = static_cast<unsigned int>(n_in);
   unsigned int chunks = std::stoi(argv[2]);
   double r = std::stod(argv[3]);
   int seed = std::stoi(argv[4]);
