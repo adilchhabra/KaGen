@@ -10,21 +10,25 @@
     #include <unordered_map>
     #include <utility>
     #include <vector>
+	#include <map>
 #endif
 
 #include <mpi.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <map>
+//#include <map>
 
 #define KAGEN_VERSION_MAJOR 1
 #define KAGEN_VERSION_MINOR 1
 #define KAGEN_VERSION_PATCH 0
 
+//typedef uint64_t NodeID; 
+
 #ifdef __cplusplus
 namespace kagen {
 std::string BuildDescription();
 }
+typedef uint64_t NodeID;
 #endif
 
 //
@@ -519,7 +523,7 @@ public:
 
   void setRandomSeed(int seed);
 
-  long long estimate_edges();
+  NodeID estimate_edges();
 
   void setupConfig_GNP_UNDIRECTED(const SInt n, const LPFloat p,
                                   const bool self_loops);
@@ -587,7 +591,7 @@ private:
   Graph chunk_graph;
   std::map<unsigned int, std::vector<unsigned int>> chunk_map;
   long max_chunk_vertex;
-  long edgeEstimation;
+  //NodeID edgeEstimation;
   std::vector<SInt> vertex_distribution;
   std::map<unsigned int, std::vector<unsigned int>>::iterator chunk_iterator;
   std::map<unsigned int, std::vector<unsigned int>> lost_edges;

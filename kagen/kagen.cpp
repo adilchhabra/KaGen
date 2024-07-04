@@ -1073,14 +1073,14 @@ void StreamingGenerator::setupChunkGeneration(MPI_Comm comm) {
   }
 }
 
-long long StreamingGenerator::estimate_edges() {
-  long long edges = 0;
+NodeID StreamingGenerator::estimate_edges() {
+  NodeID edges = 0;
   unsigned int n = generator.config_->n;
   if (generator.config_->generator == GeneratorType::BA) {
     unsigned int d = generator.config_->min_degree;
     edges = d * n;
   } else if (generator.config_->generator == GeneratorType::RGG_2D) {
-    double tuning = 1.55;
+    double tuning = 1.57;
     double r = generator.config_->r;
     edges =
         round(static_cast<double>(n) * static_cast<double>(n) * r * r * tuning);
