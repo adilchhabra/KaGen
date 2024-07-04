@@ -11,6 +11,7 @@
     #include <unordered_map>
     #include <utility>
     #include <vector>
+	#include <map>
 #endif
 
 #include <mpi.h>
