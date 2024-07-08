@@ -11,7 +11,6 @@
     #include <unordered_map>
     #include <utility>
     #include <vector>
-	#include <map>
 #endif
 
 #include <mpi.h>
@@ -511,12 +510,15 @@ std::vector<IDX> BuildVertexDistribution(const Graph& graph, MPI_Datatype idx_mp
 namespace kagen {
 class StreamingGenerator {
 public:
-    StreamingGenerator(MPI_Comm comm, int chunks);
-    void streamVertex(unsigned int vertex, MPI_Comm comm, std::vector<unsigned int>& neighbors);
-    std::pair<unsigned int, std::vector<unsigned int>> getNextVertex(MPI_Comm comm, unsigned int vertex);
-    std::pair<unsigned int, std::vector<unsigned int>> generateVertex(MPI_Comm comm);
-    void                                               generateNextChunk(int chunk_number, MPI_Comm comm);
-    void                                               buildChunkMap();
+    StreamingGenerator(MPI_Comm comm, NodeID chunks);
+    void                                   streamVertex(NodeID vertex, MPI_Comm comm, std::vector<NodeID>& neighbors);
+    std::pair<NodeID, std::vector<NodeID>> getNextVertex(MPI_Comm comm, NodeID vertex);
+    std::pair<NodeID, std::vector<NodeID>> generateVertex(MPI_Comm comm);
+    void                                   generateNextChunk(int chunk_number, MPI_Comm comm);
+    void                                   buildChunkMap();
+    double                                 compute_rgg2d_radius(unsigned int n, uint64_t m);
+    NodeID                                 compute_max_chunks_possible_rgg2d(double radius);
+    void                                   set_total_chunks(NodeID chunks);
 
     void setRandomSeed(int seed);
 
@@ -566,24 +568,24 @@ public:
 
     void setupChunkGeneration(MPI_Comm comm);
     void determineStartandFinishingTime(MPI_Comm comm);
-    bool isChunkEmpty(unsigned int vertex);
+    bool isChunkEmpty(NodeID vertex);
 
 private:
-    KaGen                                             generator;
-    int                                               total_chunks;
-    int                                               current_chunk;
-    int                                               nextChunkToBuild;
-    Graph                                             chunk_graph;
-    std::map<unsigned int, std::vector<unsigned int>> chunk_map;
-    long                                              max_chunk_vertex;
+    KaGen                                 generator;
+    NodeID                                total_chunks;
+    NodeID                                current_chunk;
+    NodeID                                nextChunkToBuild;
+    Graph                                 chunk_graph;
+    std::map<NodeID, std::vector<NodeID>> chunk_map;
+    NodeID                                max_chunk_vertex;
     // long                                                            edgeEstimation;
-    std::vector<SInt>                                               vertex_distribution;
-    std::map<unsigned int, std::vector<unsigned int>>::iterator     chunk_iterator;
-    std::map<unsigned int, std::vector<unsigned int>>               lost_edges;
-    std::vector<std::pair<unsigned int, std::vector<unsigned int>>> part_graph;
-    int                                                             part_graph_chunk_counter;
-    SInt                                                            start;
-    SInt                                                            end;
+    std::vector<SInt>                                   vertex_distribution;
+    std::map<NodeID, std::vector<NodeID>>::iterator     chunk_iterator;
+    std::map<NodeID, std::vector<NodeID>>               lost_edges;
+    std::vector<std::pair<NodeID, std::vector<NodeID>>> part_graph;
+    NodeID                                              part_graph_chunk_counter;
+    SInt                                                start;
+    SInt                                                end;
 };
 } // namespace kagen
 #endif

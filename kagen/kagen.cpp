@@ -6,6 +6,7 @@
 
 #include "streaming.h"
 #include <cmath>
+#include <cstdint>
 #include <numeric>
 #include <sstream>
 #include <unordered_map>
@@ -777,7 +778,7 @@ void StreamingKaGen::SetDefaults() {
     // keep all other defaults
 }
 
-StreamingGenerator::StreamingGenerator(MPI_Comm comm, int chunks)
+StreamingGenerator::StreamingGenerator(MPI_Comm comm, NodeID chunks)
     : generator(comm),
       total_chunks(chunks),
       max_chunk_vertex(0),
@@ -787,7 +788,7 @@ StreamingGenerator::StreamingGenerator(MPI_Comm comm, int chunks)
     vertex_distribution.resize(chunks);
 }
 
-std::pair<unsigned int, std::vector<unsigned int>> StreamingGenerator::generateVertex(MPI_Comm comm) {
+std::pair<NodeID, std::vector<NodeID>> StreamingGenerator::generateVertex(MPI_Comm comm) {
     if (nextChunkToBuild == 0) {
         std::cout << "Generate first chunk" << std::endl;
         generateNextChunk(0, comm);
@@ -798,7 +799,7 @@ std::pair<unsigned int, std::vector<unsigned int>> StreamingGenerator::generateV
             part_graph.emplace_back(Node, adj);
         }
         if (part_graph_chunk_counter < part_graph.size()) {
-            int part_graph_chunk_counter_old = part_graph_chunk_counter;
+            NodeID part_graph_chunk_counter_old = part_graph_chunk_counter;
             part_graph_chunk_counter++;
             return part_graph[part_graph_chunk_counter_old];
         } else {
@@ -817,7 +818,7 @@ std::pair<unsigned int, std::vector<unsigned int>> StreamingGenerator::generateV
                 part_graph.emplace_back(Node, adj);
             }
             if (part_graph_chunk_counter < part_graph.size()) {
-                int part_graph_chunk_counter_old = part_graph_chunk_counter;
+                NodeID part_graph_chunk_counter_old = part_graph_chunk_counter;
                 part_graph_chunk_counter++;
                 return part_graph[part_graph_chunk_counter_old];
             } else {
@@ -825,14 +826,14 @@ std::pair<unsigned int, std::vector<unsigned int>> StreamingGenerator::generateV
             }
         }
     } else {
-        int part_graph_chunk_counter_old = part_graph_chunk_counter;
+        NodeID part_graph_chunk_counter_old = part_graph_chunk_counter;
         part_graph_chunk_counter++;
         return part_graph[part_graph_chunk_counter_old];
     }
 }
 
 // make sure empty vector is given.
-void StreamingGenerator::streamVertex(unsigned int vertex, MPI_Comm comm, std::vector<unsigned int>& neighbors) {
+void StreamingGenerator::streamVertex(NodeID vertex, MPI_Comm comm, std::vector<NodeID>& neighbors) {
     // std::vector<unsigned int> neighbors;
     if (vertex == 1) { // this is we are starting the stream
         // for (unsigned int k = 0; k < vertex_distribution.size(); k++) {
@@ -855,16 +856,16 @@ void StreamingGenerator::streamVertex(unsigned int vertex, MPI_Comm comm, std::v
     auto it2 = lost_edges.find(vertex - 1);
     if (it != chunk_map.end()) {
         // std::cout << vertex << ": ";
-        for (unsigned int i = 0; i < chunk_map[vertex - 1].size(); i++) {
-            unsigned int neigh = chunk_map[vertex - 1][i] + 1;
+        for (NodeID i = 0; i < chunk_map[vertex - 1].size(); i++) {
+            NodeID neigh = chunk_map[vertex - 1][i] + 1;
             if (vertex > neigh) {
                 // std::cout << chunk_map[vertex - 1][i] + 1 << " ";
                 neighbors.push_back(chunk_map[vertex - 1][i] + 1);
             }
         }
         if (it2 != lost_edges.end()) {
-            for (unsigned int j = 0; j < lost_edges[vertex - 1].size(); j++) {
-                unsigned int neigh = lost_edges[vertex - 1][j];
+            for (NodeID j = 0; j < lost_edges[vertex - 1].size(); j++) {
+                NodeID neigh = lost_edges[vertex - 1][j];
                 if (neigh < vertex) {
                     // std::cout << lost_edges[vertex - 1][j] + 1 << " ";
                     neighbors.push_back(lost_edges[vertex - 1][j] + 1);
@@ -874,8 +875,8 @@ void StreamingGenerator::streamVertex(unsigned int vertex, MPI_Comm comm, std::v
         // std::cout << std::endl;
     } else if (it2 != lost_edges.end()) {
         // std::cout << vertex << ": ";
-        for (unsigned int j = 0; j < lost_edges[vertex - 1].size(); j++) {
-            unsigned int neigh = lost_edges[vertex - 1][j];
+        for (NodeID j = 0; j < lost_edges[vertex - 1].size(); j++) {
+            NodeID neigh = lost_edges[vertex - 1][j];
             if (neigh + 1 < vertex) {
                 // std::cout << lost_edges[vertex - 1][j] + 1 << " ";
                 neighbors.push_back(lost_edges[vertex - 1][j] + 1);
@@ -899,7 +900,7 @@ void StreamingGenerator::streamVertex(unsigned int vertex, MPI_Comm comm, std::v
     // return neighbors;
 }
 
-bool StreamingGenerator::isChunkEmpty(unsigned int vertex) {
+bool StreamingGenerator::isChunkEmpty(NodeID vertex) {
     if (generator.getConfig()->generator == GeneratorType::RHG) {
         if (vertex == end + 1) {
             return true;
@@ -912,8 +913,11 @@ bool StreamingGenerator::isChunkEmpty(unsigned int vertex) {
     return false;
 }
 
-std::pair<unsigned int, std::vector<unsigned int>>
-StreamingGenerator::getNextVertex(MPI_Comm comm, unsigned int vertex) {
+void StreamingGenerator::set_total_chunks(NodeID chunks) {
+    total_chunks = chunks;
+}
+
+std::pair<NodeID, std::vector<NodeID>> StreamingGenerator::getNextVertex(MPI_Comm comm, NodeID vertex) {
     if (vertex == 0) {
         std::cout << "Generate first chunk" << std::endl;
         generateNextChunk(0, comm);
@@ -930,7 +934,7 @@ StreamingGenerator::getNextVertex(MPI_Comm comm, unsigned int vertex) {
         nextChunkToBuild++;
     }
 
-    std::pair<unsigned int, std::vector<unsigned int>> adj_pair = *chunk_iterator;
+    std::pair<NodeID, std::vector<NodeID>> adj_pair = *chunk_iterator;
     ++chunk_iterator;
     return adj_pair;
 }
@@ -1076,8 +1080,8 @@ NodeID StreamingGenerator::estimate_edges() {
     NodeID       edges = 0;
     unsigned int n     = generator.config_->n;
     if (generator.config_->generator == GeneratorType::BA) {
-        unsigned int d = generator.config_->min_degree;
-        edges          = d * n;
+        NodeID d = generator.config_->min_degree;
+        edges    = d * n;
     } else if (generator.config_->generator == GeneratorType::RGG_2D) {
         double tuning = 1.57;
         double r      = generator.config_->r;
@@ -1098,6 +1102,30 @@ NodeID StreamingGenerator::estimate_edges() {
         std::cout << "No estimator so far... returning zero." << std::endl;
     }
     return edges;
+}
+
+double StreamingGenerator::compute_rgg2d_radius(unsigned int n, uint64_t m) {
+    double denom  = static_cast<double>(n) * n * 1.57;
+    double radius = std::sqrt(m / denom);
+    return radius;
+}
+
+NodeID StreamingGenerator::compute_max_chunks_possible_rgg2d(double radius) {
+    double bound       = 1 / (radius * radius);
+    double chunk_bound = static_cast<NodeID>(std::floor(bound));
+
+    int exponent = 0;
+    while (true) {
+        NodeID candidate = 1 << exponent;
+        if (candidate < chunk_bound) {
+            exponent++;
+            continue;
+        } else {
+            exponent--;
+            break;
+        }
+    }
+    return 1 << exponent;
 }
 
 void StreamingGenerator::setRandomSeed(int seed) {
@@ -1133,9 +1161,11 @@ void StreamingGenerator::setupConfig_RGG2D_M(const SInt n, const SInt m, const L
     generator.config_->generator = GeneratorType::RGG_2D;
     generator.config_->n         = n;
     generator.config_->m         = 0;
-    double denom                 = static_cast<double>(n) * n * 1.57;
-    double radius                = std::sqrt(m / denom);
-    std::cout << radius << std::endl;
+    double radius                = compute_rgg2d_radius(n, m);
+    NodeID chunks                = compute_max_chunks_possible_rgg2d(radius);
+    set_total_chunks(chunks);
+    vertex_distribution.resize(chunks);
+    // std::cout << chunks << " " << total_chunks << std::endl;
     generator.config_->r           = radius;
     generator.config_->coordinates = coordinates;
     generator.config_->adil_mode   = total_chunks;

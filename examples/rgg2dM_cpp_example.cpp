@@ -20,7 +20,7 @@ long getMaxRSS() {
   }
 }
 
-unsigned int compute_max_chunk_size(double r) {
+int compute_max_chunk_size(double r) {
 	double bound = 1/(r*r); 
 	double chunk_bound = static_cast<unsigned int>(std::floor(bound)); 
 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
   int seed = std::stoi(argv[3]);
 
 	double r = compute_radius(m, n);
-	unsigned int chunks = compute_max_chunk_size(r); 
+	int chunks = compute_max_chunk_size(r); 
 	std::cout << "Radius: " << r << ", Max number of chunks available: " << chunks << std::endl;
 
 
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 
   kagen::KaGen generator(MPI_COMM_WORLD);
 
-  kagen::StreamingGenerator streamGenerator(MPI_COMM_WORLD, chunks);
+  kagen::StreamingGenerator streamGenerator(MPI_COMM_WORLD, 0);
 
   streamGenerator.setupConfig_RGG2D_M(n, m, 0, false);
   streamGenerator.setRandomSeed(seed);
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
   overall_time += t.elapsed();
   t.restart();
   unsigned int edges = 0;
-  /*for (unsigned int i = 0; i < n; i++) {
+  for (unsigned int i = 0; i < n; i++) {
     std::vector<unsigned int> neighbors; 
         streamGenerator.streamVertex(i + 1, MPI_COMM_WORLD, neighbors);
     overall_time += t.elapsed();
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
     //  }
     //  std::cout << std::endl;
   }
-*/
+
   // Generate a RGG2D graph with 16 nodes and 32 edges
   // generator.GenerateRGG2D_Streaming(20, 0.5, false, 4);
   /*

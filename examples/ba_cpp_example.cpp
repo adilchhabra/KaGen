@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  unsigned int n = std::stoi(argv[1]);
-  unsigned int chunks = std::stoi(argv[2]);
+  uint64_t n = std::stoll(argv[1]);
+  uint64_t chunks = std::stoll(argv[2]);
   unsigned int d = std::stoi(argv[3]);
   unsigned int seed = std::stoi(argv[4]);
 
@@ -55,17 +55,17 @@ int main(int argc, char *argv[]) {
   streamGenerator.setupChunkGeneration(MPI_COMM_WORLD);
   overall_time += t.elapsed();
   t.restart();
-  unsigned int edges = 0;
-  for (unsigned int i = 0; i < n; i++) {
-    std::vector<unsigned int> neighbors;
+  uint64_t edges = 0;
+  for (uint64_t i = 0; i < n; i++) {
+    std::vector<uint64_t> neighbors;
         streamGenerator.streamVertex(i + 1, MPI_COMM_WORLD, neighbors);
     overall_time += t.elapsed();
     edges += neighbors.size();
-    /*out << i + 1 << ": ";
-    for (unsigned int j = 0; j < neighbors.size(); j++) {
-      out << neighbors[j] << " ";
+	std::cout << i + 1 << ": ";
+    for (uint64_t j = 0; j < neighbors.size(); j++) {
+		std::cout << neighbors[j] << " ";
     }
-    out << std::endl;*/
+	std::cout << std::endl;
     t.restart();
     //  std::cout << neighbors.first + 1 << ": ";
     //  for (int j = 0; j < neighbors.second.size(); j++) {

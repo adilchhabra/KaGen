@@ -65,11 +65,11 @@ int main(int argc, char *argv[]) {
         streamGenerator.streamVertex(i + 1, MPI_COMM_WORLD, neighbors);
     overall_time += t.elapsed();
     edges += neighbors.size();
-	std::cout << i+1 << ": ";
-    for (unsigned int j = 0; j < neighbors.size(); j++) {
-		std::cout << neighbors[j] << " ";
-    }
-	std::cout << std::endl;
+//	std::cout << i+1 << ": ";
+//    for (unsigned int j = 0; j < neighbors.size(); j++) {
+//		std::cout << neighbors[j] << " ";
+//    }
+//	std::cout << std::endl;
     t.restart();
     //  std::cout << neighbors.first + 1 << ": ";
     //  for (int j = 0; j < neighbors.second.size(); j++) {
