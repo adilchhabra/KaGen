@@ -1078,7 +1078,7 @@ void StreamingGenerator::setupChunkGeneration(MPI_Comm comm) {
 
 NodeID StreamingGenerator::estimate_edges() {
     NodeID       edges = 0;
-    unsigned int n     = generator.config_->n;
+    NodeID n     = generator.config_->n;
     if (generator.config_->generator == GeneratorType::BA) {
         NodeID d = generator.config_->min_degree;
         edges    = d * n;
