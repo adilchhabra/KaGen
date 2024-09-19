@@ -523,6 +523,53 @@ mpirun -n <nproc> ./app/tools/chkgraph <path to graph>
   [-n <num vertices>]         # provide the number of vertices in the graph -- currently only used for the plain-edgelist input format
 ```
 
+## KaGen Streaming Mode
+The following graph models are currently supported in streaming mode: 
+
+ 1. Random Geometric Graphs (2D & 3D)
+ 2. Barabassi-Albert Graphs
+ 3. Random Delaunay Graphs (2D & 3D)
+ 4. Random Hyperbolic Graphs
+
+In the following, we give a short introduction on how to use each of the generators. Please note that this is a temporary stage for testing purposes.
+
+**General Information**
+In general our generators generate one vertex at a time (where the node ids start from 1) and generate the vertex and its neighbors with a smaller node id. Hence, we generate each edge only once. Every graph model listed above comes with its own code for execution. The corresponding code can be found in the following folder. 
+
+> KaGen/examples
+
+Internally, the generators split the graphs into chunks. The number of chunks must be specified and influences the memory and time performance. Generally speaking, the greater the number of chunks, the less memory the generator uses. However, one has to be careful when the number of chunks becomes too large. In particular, the number of chunks should not exceed the number of generated vertices. We provide details in the corresponding section. Our output for the generators consists of four lines (if the neighborhoods of the vertices are not printed): The overall time for the graph generation, the maximum memory usage, the number of generated edges (undirected) and the estimated number of edges. For the listed generators above we have an estimator for the number of edges which is based on the probability models for the corresponding graph models. To print the neighborhoods or to see how to use the streaming library, refer to the corresponding files in the 'examples' folder, for example:  
+
+> KaGen/examples/ba_cpp_example.cpp
+
+To compile the code simply use `./compile.sh` . Further information about compiling is contained in the original KaGen README.md
+
+**Random Geometric Graphs** 
+To use the streaming generator for the Random Geometric Graph model, the following parameters are needed: The number of vertices, the number of chunks, the radius and a random seed. 
+Usage: 
+
+    ./build/examples/example_cpp_rgg2/3d <vertices> <chunks> <radius> <seed>
+Note that one has to make sure that $k < 1/r^2$ where $k$ is the number of chunks and that $k$ must be a power of two.
+
+**Barabassi-Albert Graphs**
+To use the streaming generator for the Barabassi-Albert model, the following parameters are needed: The number of vertices, the number of chunks, the minimum degree for each vertex and a random seed.
+Usage:
+
+    ./build/examples/example_cpp_ba <vertices> <chunks> <degree> <seed>
+
+**Random Delaunay Graphs**
+
+To use the streaming generator for the Random Delaunay Graphs, the following parameters are needed: The number of vertices, the number of chunks, the periodic flag and a random seed.
+Usage:
+
+    ./build/examples/example_rdg2&3d <vertices> <chunks> <periodic> <seed>
+
+**Random Hyperbolic Graphs**
+To use the streaming generator for the Random Hyperbolic Graphs, the following parameters are needed: The number of vertices, the number of chunks, the average vertex degree, the power law exponent and a random seed.
+Usage:
+
+    ./build/examples/example_cpp_rhg <vertices> <chunks> <average degree> <gamma> <seed> 
+
 ---
 
 **[License](/LICENSE):** 2-clause BS
